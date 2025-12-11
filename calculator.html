@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Premium iOS-style Scientific Calculator</title>
+<style>
+  :root{
+    --bg:#0b0b0d;
+    --panel: rgba(255,255,255,0.03);
+    --glass: rgba(255,255,255,0.03);
+    --accent: linear-gradient(135deg,#6ee7f3 0%, #8b5cf6 100%);
+    --muted: rgba(255,255,255,0.22);
+    --white: #fff;
+    --glass-border: rgba(255,255,255,0.06);
+    --glass-2: rgba(255,255,255,0.02);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+
+  html,body{
+    height:100%;
+    margin:0;
+    background: radial-gradient(2000px 800px at 10% 10%, rgba(139,92,246,0.06), transparent),
+                radial-gradient(1600px 700px at 90% 90%, rgba(110,231,243,0.03), transparent),
+                var(--bg);
+    color:var(--white);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+    box-sizing:border-box;
+  }
+
+  .calculator{
+    width:min(560px,96vw);
+    border-radius:28px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    box-shadow: 0 10px 30px rgba(2,6,23,0.7), inset 0 1px 0 rgba(255,255,255,0.02);
+    padding:20px;
+    border:1px solid var(--glass-border);
+    backdrop-filter: blur(8px) saturate(120%);
+  }
+
+  /* header row */
+  .top-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+
+  .brand{
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+
+  .logo{
+    width:44px;height:44px;border-radius:12px;
+    background:var(--accent);
+    box-shadow: 0 6px 18px rgba(139,92,246,0.18);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;color:#08131a;
+    transform: translateY(0);
+  }
+
+  .title{
+    font-size:14px;line-height:1;color:var(--white);opacity:0.95;
+  }
+  .subtitle{font-size:11px;color:var(--muted);margin-top:2px}
+
+  .controls{
+    display:flex;gap:8px;align-items:center;
+  }
+  .chip{
+    padding:6px 10px;border-radius:999px;border:1px solid var(--glass-border);
+    background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);
+    font-size:13px;color:var(--muted);
+    cursor:pointer;user-select:none;
+  }
+  .chip.toggle{display:flex;align-items:center;gap:8px}
+
+  /* display */
+  .display{
+    margin-bottom:16px;
+    border-radius:16px;
+    padding:14px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.008));
+    border:1px solid var(--glass-2);
+    min-height:86px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:flex-end;
+  }
+  .expr{
+    font-size:14px;color:var(--muted);min-height:20px;word-break:break-all;
+  }
+  .result{
+    font-size:28px;font-weight:600;margin-top:6px;
+    letter-spacing:0.6px;
+  }
+
+  /* keypad */
+  .keys{
+    display:grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap:10px;
+  }
+
+  .key{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:14px;
+    border-radius:12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.018), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.03);
+    box-shadow: 0 6px 12px rgba(2,6,23,0.6), inset 0 -2px 0 rgba(0,0,0,0.15);
+    color:var(--white);
+    font-size:15px;
+    cursor:pointer;
+    user-select:none;
+    transition: transform 120ms cubic-bezier(.2,.9,.3,1), box-shadow 120ms;
+  }
+  .key:active{ transform: translateY(3px) scale(0.995); box-shadow: 0 3px 6px rgba(2,6,23,0.7); }
+
+  .key.secondary{
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+    color:var(--muted);
+    font-weight:600;
+    font-size:13px;
+  }
+
+  .key.op{
+    background: linear-gradient(180deg, rgba(139,92,246,0.12), rgba(110,231,243,0.05));
+    color:#061018;
+    font-weight:700;
+    background-image: var(--accent);
+    background-size:200% 200%;
+    animation: shine 6s linear infinite;
+  }
+  @keyframes shine{
+    0%{ background-position:0% 0% }
+    50%{ background-position:100% 100% }
+    100%{ background-position:0% 0% }
+  }
+
+  .key.wide{ grid-column: span 2; }
+
+  /* small screens */
+  @media (max-width:420px){
+    .keys{ grid-template-columns: repeat(4, 1fr); }
+    .top-row .subtitle{ display:none; }
+  }
+
+  /* subtle hover */
+  .key:hover{ transform: translateY(-3px); box-shadow: 0 12px 28px rgba(2,6,23,0.5); }
+
+  /* footer note */
+  .foot{ margin-top:12px;color:var(--muted);font-size:12px;text-align:center;opacity:0.9 }
+  .deg-indicator{ font-weight:600;color:var(--muted); font-size:12px }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="calculator" role="application" aria-label="Scientific calculator">
+    <div class="top-row">
+      <div class="brand">
+        <div class="logo">SC</div>
+        <div>
+          <div class="title">Scientific Calculator by Sujal Shahi</div>
+          <div class="subtitle">iOS-style • Engineering mode</div>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="chip" id="memory-ind">M: 0</div>
+        <div class="chip toggle" id="degBtn" title="Toggle degrees/radians"><span id="degTxt">DEG</span></div>
+        <div class="chip" id="clearAll" title="Clear">AC</div>
+      </div>
+    </div>
+
+    <div class="display" id="display">
+      <div class="expr" id="expr"></div>
+      <div class="result" id="result">0</div>
+    </div>
+
+    <div class="keys" id="keys">
+      <!-- Row 1 -->
+      <div class="key secondary" data-action="mc">MC</div>
+      <div class="key secondary" data-action="mr">MR</div>
+      <div class="key secondary" data-action="mplus">M+</div>
+      <div class="key secondary" data-action="mminus">M-</div>
+      <div class="key secondary" data-action="(">(</div>
+      <div class="key secondary" data-action=")">)</div>
+
+      <!-- Row 2 -->
+      <div class="key secondary" data-action="sin">sin</div>
+      <div class="key secondary" data-action="cos">cos</div>
+      <div class="key secondary" data-action="tan">tan</div>
+      <div class="key secondary" data-action="asin">asin</div>
+      <div class="key secondary" data-action="acos">acos</div>
+      <div class="key secondary" data-action="atan">atan</div>
+
+      <!-- Row 3 -->
+      <div class="key secondary" data-action="ln">ln</div>
+      <div class="key secondary" data-action="log">log</div>
+      <div class="key secondary" data-action="exp">eˣ</div>
+      <div class="key secondary" data-action="10^x">10ˣ</div>
+      <div class="key secondary" data-action="sqrt">√</div>
+      <div class="key secondary" data-action="^">xʸ</div>
+
+      <!-- Row 4 -->
+      <div class="key" data-action="7">7</div>
+      <div class="key" data-action="8">8</div>
+      <div class="key" data-action="9">9</div>
+      <div class="key op" data-action="÷">÷</div>
+      <div class="key secondary" data-action="percent">%</div>
+      <div class="key secondary" data-action="fact">x!</div>
+
+      <!-- Row 5 -->
+      <div class="key" data-action="4">4</div>
+      <div class="key" data-action="5">5</div>
+      <div class="key" data-action="6">6</div>
+      <div class="key op" data-action="×">×</div>
+      <div class="key secondary" data-action="pi">π</div>
+      <div class="key secondary" data-action="e">e</div>
+
+      <!-- Row 6 -->
+      <div class="key" data-action="1">1</div>
+      <div class="key" data-action="2">2</div>
+      <div class="key" data-action="3">3</div>
+      <div class="key op" data-action="-">−</div>
+      <div class="key secondary" data-action="ans">Ans</div>
+      <div class="key secondary" data-action="deg">Deg</div>
+
+      <!-- Row 7 -->
+      <div class="key wide" data-action="0">0</div>
+      <div class="key" data-action=".">.</div>
+      <div class="key op" data-action="+">+</div>
+      <div class="key secondary" data-action="back">⌫</div>
+      <div class="key op" data-action="=">=</div>
+    </div>
+
+    <div class="foot">Tip: Use keyboard (numbers/operators). Toggle DEG/RAD for trig. Smooth click animations included.</div>
+  </div>
+</div>
+
+<script>
+/*
+  Scientific calculator JS
+  - Supports sin/cos/tan and inverse, logs, ln, sqrt, powers, factorial, percent, memory
+  - Degree/radian toggle
+  - Expression sanitization and safe evaluation via transforms to Math.* and custom helpers
+*/
+
+(function(){
+  const exprEl = document.getElementById('expr');
+  const resultEl = document.getElementById('result');
+  const keys = document.getElementById('keys');
+  const degBtn = document.getElementById('degBtn');
+  const degTxt = document.getElementById('degTxt');
+  const memInd = document.getElementById('memory-ind');
+  const clearAll = document.getElementById('clearAll');
+
+  let expression = '';
+  let lastAnswer = 0;
+  let mem = 0;
+  let degMode = true; // DEG by default
+
+  function updateDisplay(){
+    exprEl.textContent = expression || '';
+    resultEl.textContent = expression ? '' : (String(lastAnswer || 0));
+  }
+
+  updateDisplay();
+
+  // helpers
+  function safeEval(expr){
+    // create helper functions and replace tokens into JS
+    // 1. normalize symbols
+    let s = expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/—/g,'-');
+
+    // percent handling: convert 'number%' to (number/100)
+    s = s.replace(/(\d+(\.\d+)?)%/g, '($1/100)');
+
+    // replace constants
+    s = s.replace(/π/g, 'Math.PI').replace(/\be\b/g, 'Math.E');
+
+    // power ^ => **
+    s = s.replace(/\^/g, '**');
+
+    // replace common function names with Math equivalents or wrappers
+    // We'll create wrapper functions in eval scope and call them by unique names
+    // functions: sin cos tan asin acos atan ln log sqrt exp pow, fact
+    // Replace sin( x ) with __sin__(x)
+    const funcs = ['sin','cos','tan','asin','acos','atan','ln','log','sqrt','exp','fact','abs','floor','ceil','round'];
+    funcs.forEach(fn => {
+      const re = new RegExp('\\b' + fn + '\\s*\\(', 'g');
+      s = s.replace(re, '__' + fn + '__(');
+    });
+
+    // replace occurrences of ans with lastAnswer
+    s = s.replace(/\bAns\b/g, '(' + String(lastAnswer) + ')');
+
+    // sanitize: allow only numbers, Math., parentheses, operators, __func__ names, decimal points, commas
+    // We'll check for invalid chars
+    if (/[^0-9+\-*/()., *%__A-Za-zPIElnogtcrasbfqxye]/.test(s)) {
+      // allow a conservative set, but above regex is broad; we'll instead try-catch eval
+    }
+
+    // handle factorial operator like 5! or (expr)! -> replace n! by __fact__(n)
+    // We'll iteratively replace occurrences like number! or )! with wrapper
+    function replaceFactorials(str){
+      // number!
+      str = str.replace(/(\d+(\.\d+)?)\s*!/g, '__fact__($1)');
+      // (expr)!
+      str = str.replace(/\)\s*!/g, ' )__FACT_MARK__!'); // mark to handle
+      // Now replace patterns like )__FACT_MARK__! -> __fact__( (inside) )
+      // This approach is tricky — simpler approach: evaluate using regex to find last ( ... )! pattern
+      // We'll use loop:
+      while (/\([^\(\)]+\)\s*!/.test(str)) {
+        str = str.replace(/\(([^\(\)]+)\)\s*!/g, '__fact__(($1))');
+      }
+      // leftover markers
+      str = str.replace(/\)\s*!/g, '__fact__( )'); // fallback
+      return str;
+    }
+    s = replaceFactorials(s);
+
+    // Build function scope for eval
+    const scope = {
+      __sin__: function(x){ return degMode ? Math.sin(x * Math.PI/180) : Math.sin(x); },
+      __cos__: function(x){ return degMode ? Math.cos(x * Math.PI/180) : Math.cos(x); },
+      __tan__: function(x){ return degMode ? Math.tan(x * Math.PI/180) : Math.tan(x); },
+
+      __asin__: function(x){ const v = Math.asin(x); return degMode ? v * 180/Math.PI : v; },
+      __acos__: function(x){ const v = Math.acos(x); return degMode ? v * 180/Math.PI : v; },
+      __atan__: function(x){ const v = Math.atan(x); return degMode ? v * 180/Math.PI : v; },
+
+      __ln__: function(x){ return Math.log(x); },
+      __log__: function(x){ if (Math.log10) return Math.log10(x); return Math.log(x)/Math.LN10; },
+      __sqrt__: function(x){ return Math.sqrt(x); },
+      __exp__: function(x){ return Math.exp(x); },
+      __fact__: function(n){
+        // factorial supports integers >=0; for non-integers use gamma approximation (not implemented)
+        const a = Number(n);
+        if (!isFinite(a) || a < 0) throw 'Invalid factorial';
+        const int = Math.floor(a);
+        if (Math.abs(a - int) > 1e-12) throw 'Factorial only for integers';
+        let f = 1;
+        for (let i=2;i<=int;i++) f *= i;
+        return f;
+      },
+      __abs__: Math.abs,
+      __floor__: Math.floor,
+      __ceil__: Math.ceil,
+      __round__: Math.round,
+      Math: Math
+    };
+
+    // provide a safe eval via Function with scoped names
+    // We'll build parameter list and pass scope values
+    const argNames = Object.keys(scope);
+    const argVals = argNames.map(k=>scope[k]);
+
+    // allow usage of Math.* in user expressions (we left Math references earlier)
+    const code = '"use strict"; return (' + s + ');';
+    try {
+      const f = new Function(...argNames, code);
+      const res = f(...argVals);
+      if (typeof res === 'number' && !isFinite(res)) throw 'Math error';
+      return res;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  function calculateAndShow(){
+    if (!expression) return;
+    try {
+      const val = safeEval(expression);
+      lastAnswer = (typeof val === 'number' && !isNaN(val)) ? roundSmart(val) : val;
+      resultEl.textContent = String(lastAnswer);
+    } catch (e) {
+      resultEl.textContent = 'Error';
+      //console.error(e);
+    }
+  }
+
+  function roundSmart(n){
+    // show small rounding; keep up to 12 digits but trim trailing zeros
+    if (!isFinite(n)) return n;
+    let s = Number.parseFloat(n.toPrecision(12)).toString();
+    return Number(s);
+  }
+
+  // key handling
+  keys.addEventListener('click', (ev)=>{
+    const k = ev.target.closest('.key');
+    if(!k) return;
+    const a = k.getAttribute('data-action');
+    handleInput(a);
+  });
+
+  // keyboard bindings
+  window.addEventListener('keydown', (ev)=>{
+    const key = ev.key;
+    if (/^[0-9]$/.test(key)) handleInput(key);
+    else if (key === 'Enter' || key === '=') handleInput('=');
+    else if (key === 'Backspace') handleInput('back');
+    else if (key === 'Escape') handleInput('AC');
+    else if (key === '.') handleInput('.');
+    else if (key === '+') handleInput('+');
+    else if (key === '-') handleInput('−');
+    else if (key === '*') handleInput('×');
+    else if (key === '/') handleInput('÷');
+    else if (key === '(') handleInput('(');
+    else if (key === ')') handleInput(')');
+  });
+
+  function handleInput(action){
+    // direct numeric or symbol
+    if (!isNaN(action) && action !== null) {
+      expression += action;
+      updateDisplay();
+      calculateAndShow();
+      return;
+    }
+
+    switch(action){
+      case '.':
+        // prevent multiple dots in last number
+        if (/(\d+\.\d*)$/.test(expression)) return;
+        expression += '.';
+        updateDisplay();
+        calculateAndShow();
+        break;
+      case '+': case '-': case '×': case '÷': case '^':
+        expression += action;
+        updateDisplay();
+        break;
+      case '(':
+      case ')':
+        expression += action;
+        updateDisplay();
+        calculateAndShow();
+        break;
+      case 'sin': case 'cos': case 'tan':
+      case 'asin': case 'acos': case 'atan':
+      case 'ln': case 'log': case 'sqrt': case 'exp':
+        expression += action + '(';
+        updateDisplay();
+        break;
+      case '10^x':
+        expression += '10^(';
+        updateDisplay();
+        break;
+      case 'pi':
+        expression += 'π';
+        updateDisplay();
+        calculateAndShow();
+        break;
+      case 'e':
+        expression += 'e';
+        updateDisplay();
+        calculateAndShow();
+        break;
+      case 'percent':
+        // append percent operator which safeEval handles for numbers immediately before %
+        expression += '%';
+        updateDisplay();
+        calculateAndShow();
+        break;
+      case 'fact':
+        expression += '!';
+        updateDisplay();
+        calculateAndShow();
+        break;
+      case 'back':
+        expression = expression.slice(0,-1);
+        updateDisplay();
+        calculateAndShow();
+        break;
+      case 'AC':
+      case 'clear':
+      case 'clearAll':
+        expression = '';
+        resultEl.textContent = String(lastAnswer || 0);
+        updateDisplay();
+        break;
+      case '=':
+        try {
+          const val = safeEval(expression || String(lastAnswer));
+          lastAnswer = (typeof val === 'number' && !isNaN(val)) ? roundSmart(val) : val;
+          expression = ''; // treat as completed
+          resultEl.textContent = String(lastAnswer);
+          updateDisplay();
+        } catch (e) {
+          resultEl.textContent = 'Error';
+        }
+        break;
+      case 'ans':
+        expression += 'Ans';
+        updateDisplay();
+        break;
+      case 'deg':
+        // small quick toggle button (in keypad)
+        degMode = !degMode;
+        degTxt.textContent = degMode ? 'DEG' : 'RAD';
+        updateDisplay();
+        break;
+      case 'mplus':
+        mem += Number(lastAnswer) || 0;
+        memInd.textContent = 'M: ' + mem;
+        break;
+      case 'mminus':
+        mem -= Number(lastAnswer) || 0;
+        memInd.textContent = 'M: ' + mem;
+        break;
+      case 'mr':
+        expression += String(mem);
+        updateDisplay();
+        break;
+      case 'mc':
+        mem = 0;
+        memInd.textContent = 'M: 0';
+        break;
+      case 'sqrt':
+        expression += 'sqrt(';
+        updateDisplay();
+        break;
+      case 'exp':
+        expression += 'exp(';
+        updateDisplay();
+        break;
+      case '10^x':
+        expression += '10^(';
+        updateDisplay();
+        break;
+      case 'AC':
+      case 'clearAll':
+        expression = '';
+        updateDisplay();
+        break;
+      case 'mc': case 'mr': case 'mplus': case 'mminus':
+        // handled above
+        break;
+      default:
+        if (action === 'MC' || action === 'MR') { /* handled by lowercase above */ }
+        else if (action === 'Deg') {
+          degMode = !degMode;
+          degTxt.textContent = degMode ? 'DEG' : 'RAD';
+        } else if (action === 'Ans') {
+          expression += String(lastAnswer);
+        } else if (action === 'AC') {
+          expression = '';
+          resultEl.textContent = '';
+        }
+        break;
+    }
+  }
+
+  // deg toggle control
+  degBtn.addEventListener('click', ()=>{
+    degMode = !degMode;
+    degTxt.textContent = degMode ? 'DEG' : 'RAD';
+    degBtn.animate([{ transform: 'translateY(0)' }, { transform:'translateY(-4px)' }, { transform:'translateY(0)'}], { duration:240 });
+  });
+
+  clearAll.addEventListener('click', ()=>{
+    expression = '';
+    lastAnswer = 0;
+    resultEl.textContent = '0';
+    updateDisplay();
+  });
+
+  // expose for debugging (optional)
+  window._calc = {get expression(){return expression}, get last(){return lastAnswer}};
+
+  // live evaluate every time expression changes after short debounce
+  let evalTimer = null;
+  const origHandle = handleInput;
+  // already calling calculateAndShow after input where appropriate
+
+})();
+</script>
+</body>
+</html>
